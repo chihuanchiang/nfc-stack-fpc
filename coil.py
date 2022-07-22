@@ -6,14 +6,13 @@ from typing import Tuple
 
 class Coil:
 
-    def __init__(self, board: BOARD, top_layer: int, bottom_layer: int, diameter: int, track_w: int, track_s: int, n: int):
+    def __init__(self, board: BOARD, diameter: int, track_w: int, track_s: int, turns: int):
         self.board = board
-        self.top_layer  = top_layer
-        self.bottom_layer = bottom_layer
+        self.layer_table = get_layer_table(board)
         self.diameter = diameter
         self.track_w = track_w
         self.track_s = track_s
-        self.n = n
+        self.turns = turns
         self._set_points()
 
 
@@ -25,7 +24,7 @@ class Coil:
         heading = [wxPoint(1, 0), wxPoint(0, 1), wxPoint(-1, 0), wxPoint(0, -1)]
         self.points = []
         self.points.append(curr)
-        for i in range(self.n):
+        for i in range(self.turns):
             for j in range(4):
                 curr += multiplied(heading[j], length)
                 self.points.append(copy(curr))
@@ -42,8 +41,8 @@ class Coil:
         end = rotated(end, angle) + pos
         points = [rotated(p, angle) + pos for p in points]
 
-        polyline(self.board, points, self.track_w, self.top_layer)
-        segment(self.board, points[-1], end, self.track_w, self.bottom_layer)
-        via(self.board, points[-1], self.track_w, (self.top_layer, self.bottom_layer))
-        via(self.board, end, self.track_w, (self.top_layer, self.bottom_layer))
+        polyline(self.board, points, self.track_w, self.layer_table['F.Cu'])
+        segment(self.board, points[-1], end, self.track_w, self.layer_table['B.Cu'])
+        via(self.board, points[-1], self.track_w, self.layer_table['F.Cu'], self.layer_table['B.Cu'])
+        via(self.board, end, self.track_w, self.layer_table['F.Cu'], self.layer_table['B.Cu'])
         return (start, end)

@@ -1,20 +1,23 @@
 from pcbnew import *
 from utils import *
 from vector import *
-from math import radians, tan
+from math import radians, tan, ceil
 from abc import ABC, abstractmethod
+from coil import Coil
 
 
 class Cuboid(ABC):
 
-    def __init__(self, board: BOARD, length: int, height: int, max_n: int, outline_width: int):
-        self.side = 4
-        self.layer_table = get_layer_table()
+    def __init__(self, board: BOARD, coil: Coil, length: int, height: int, max_n: int, outline_width: int):
         self.board = board
+        self.coil = coil
         self.length = length
         self.height = height
         self.max_n = max_n
         self.outline_width = outline_width
+        self.side = 4
+        self.layer_table = get_layer_table(board)
+        self.coil_n = ceil(max_n / self.side)
 
 
     def create_tab(self, width: int = FromMM(4), taper_angle: float = radians(15)) -> None:
@@ -22,10 +25,10 @@ class Cuboid(ABC):
         points = [
             wxPoint(0, 0),
             wxPoint(-width, offset),
-            wxPoint(-width, self.height - width),
+            wxPoint(-width, self.height - offset),
             wxPoint(0, self.height),
         ]
-        polyline(self.board, points, self.outline_width, self.layer_table['Edge.Cuts'])
+        polyline(self.board, points, self.outline_width, self.layer_table['Edge.Cuts'], False)
 
 
     def create_wing(self, pos: wxPoint, angle: float, coil_n: int) -> None:
@@ -74,8 +77,8 @@ class Cuboid(ABC):
         self.create_tab()
         segment(
             self.board, 
-            wxPoint(4 * self.length, 0), 
-            wxPoint(4 * self.length, self.height), 
+            wxPoint(self.side * self.length, 0), 
+            wxPoint(self.side * self.length, self.height), 
             self.outline_width, 
             self.layer_table['Edge.Cuts'], 
             False,

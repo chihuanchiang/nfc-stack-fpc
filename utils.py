@@ -2,8 +2,8 @@ from pcbnew import *
 from typing import Dict, List, Tuple
 
 
-def get_layer_table() -> Dict[str, int]:
-    return {BOARD().GetLayerName(i): i for i in range(PCB_LAYER_ID_COUNT)}
+def get_layer_table(board: BOARD) -> Dict[str, int]:
+    return {board.GetLayerName(i): i for i in range(PCB_LAYER_ID_COUNT)}
 
 
 def segment(board: BOARD, start: wxPoint, end: wxPoint, width: int, layer: int, is_track: bool = True) -> None:
@@ -20,10 +20,15 @@ def polyline(board: BOARD, points: List[wxPoint], width: int, layer: int, is_tra
         segment(board, points[i], points[i + 1], width, layer, is_track)
 
 
-def via(board: BOARD, pos: wxPoint, width: int, layers: Tuple[int, int]) -> None:
+def via(board: BOARD, pos: wxPoint, width: int, top_layer: int, bottom_layer: int) -> None:
     new_via = PCB_VIA(board)
     board.Add(new_via)
-    new_via.SetLayerPair(layers[0], layers[1])
+    new_via.SetLayerPair(top_layer, bottom_layer)
     new_via.SetPosition(pos)
     new_via.SetViaType(VIATYPE_THROUGH)
     new_via.SetWidth(width)
+
+
+def round_to_four(n: int) -> int:
+    rm = n % 4
+    return n if (rm == 0) else n - rm + 4
