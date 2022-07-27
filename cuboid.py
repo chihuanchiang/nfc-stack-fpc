@@ -3,21 +3,20 @@ from utils import *
 from vector import *
 from math import radians, tan, ceil
 from abc import ABC, abstractmethod
-from coil import Coil
+from coil import CoilStyle
 
 
 class Cuboid(ABC):
 
-    def __init__(self, board: BOARD, coil: Coil, length: int, height: int, max_n: int, outline_width: int):
+    def __init__(self, board: BOARD, coil_style: CoilStyle, length: int, height: int, stack_n: int):
         self.board = board
-        self.coil = coil
+        self.coil_style = coil_style
         self.length = length
         self.height = height
-        self.max_n = max_n
-        self.outline_width = outline_width
+        self.stack_n = stack_n
+        self.outline_width = FromMM(0.1)
         self.side = 4
-        self.layer_table = get_layer_table(board)
-        self.coil_n = ceil(max_n / self.side)
+        self.coil_n = ceil(stack_n / self.side)
 
 
     def create_tab(self, width: int = FromMM(4), taper_angle: float = radians(15)) -> None:
@@ -28,7 +27,7 @@ class Cuboid(ABC):
             wxPoint(-width, self.height - offset),
             wxPoint(0, self.height),
         ]
-        polyline(self.board, points, self.outline_width, self.layer_table['Edge.Cuts'], False)
+        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
 
 
     def create_wing(self, pos: wxPoint, angle: float, coil_n: int) -> None:
@@ -48,7 +47,7 @@ class Cuboid(ABC):
         for p in points:
             rotate(p, angle)
             add(p, pos)
-        polyline(self.board, points, self.outline_width, self.layer_table['Edge.Cuts'], False)
+        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
 
         points = [
             wxPoint(l, l / 3 + tolerance),
@@ -60,7 +59,7 @@ class Cuboid(ABC):
         for p in points:
             rotate(p, angle)
             add(p, pos)
-        polyline(self.board, points, self.outline_width, self.layer_table['Edge.Cuts'], False)
+        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
 
     
     @abstractmethod
@@ -80,7 +79,7 @@ class Cuboid(ABC):
             wxPoint(self.side * self.length, 0), 
             wxPoint(self.side * self.length, self.height), 
             self.outline_width, 
-            self.layer_table['Edge.Cuts'], 
+            Edge_Cuts, 
             False,
         )
 

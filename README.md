@@ -1,2 +1,2 @@
 # nfc-stack-fpc
-A tool that generates Gerber files for FPC manufacturing of NFC building blocks.
+A tool that generates Gerber files of NFC building blocks for FPC manufacturing.
