@@ -6,13 +6,12 @@ from cuboid import Cuboid
 from schematic import Schematic
 from typing import List
 
-
 class Station(Cuboid):
 
-    def __init__(self, board: BOARD, coil_style: CoilStyle, length: int, height: int, stack_n: int):
+    def __init__(self, board: BOARD, sch: Schematic, coil_style: CoilStyle, length: int, height: int, stack_n: int):
         super().__init__(board, coil_style, length, height, stack_n)
         self._init_coils()
-
+        self._init_footprints(sch)
 
     def _init_coils(self) -> None:
         l = self.length / (self.coil_n + 1)
@@ -25,6 +24,13 @@ class Station(Cuboid):
                 self.coil.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 0.5) * l, -0.5 * l), radians(90), True))
         self.coil.append(Coil(self.board, self.coil_style, wxPoint(2 * self.length + margin_l, self.height - margin_b), 0))
 
+    def _init_footprints(self, sch: Schematic) -> None:
+        self.c_coil: List[FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
+        self.c_mux: FOOTPRINT = self.board.FindFootprintByReference(sch.c_mux.ref)
+        self.mux: FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
+        self.mcu: FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
+        self.head_ant: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
+        self.head_ftdi: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
 
     def _layout_caps(self) -> None:
         for cap, co in zip(self.c_coil[:-1], self.coil[:-1]):
@@ -34,15 +40,11 @@ class Station(Cuboid):
         self.c_coil[-1].SetPosition(wxPoint(2 * self.length - FromMM(3), (t[0].y + t[1].y) / 2))
         self.c_coil[-1].SetOrientationDegrees(90)
 
+    def _create_top(self, pos: wxPoint, angle: float) -> None:
+        self._create_wing(pos, angle, self.coil_n)
 
-    def load_footprints(self, sch: Schematic) -> None:
-        self.c_coil: List[FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
-        self.c_mux: FOOTPRINT = self.board.FindFootprintByReference(sch.c_mux.ref)
-        self.mux: FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
-        self.mcu: FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
-        self.head_ant: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
-        self.head_ftdi: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
-
+    def _create_bottom(self, pos: wxPoint, angle: float) -> None:
+        self._create_wing(pos, angle, 0) # No coils at the bottom
 
     def layout(self) -> None:
         self._layout_caps()
@@ -58,20 +60,10 @@ class Station(Cuboid):
         self.c_mux.SetPosition(self.mux.GetPosition() + wxPoint(FromMM(8), 0))
         self.c_mux.SetOrientationDegrees(90)
 
-
     def create_coils(self) -> None:
         for cap, co in zip(self.c_coil, self.coil):
             co.create()
             co.extend(cap)
-
-
-    def create_top(self, pos: wxPoint, angle: float) -> None:
-        self.create_wing(pos, angle, self.coil_n)
-
-
-    def create_bottom(self, pos: wxPoint, angle: float) -> None:
-        self.create_wing(pos, angle, 0) # No coils at the bottom
-
 
     def set_zones(self) -> None:
         clearance = FromMM(0.5)

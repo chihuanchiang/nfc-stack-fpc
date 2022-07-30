@@ -2,7 +2,6 @@ from pcbnew import *
 from box import Box
 from gerber_plot import generate_drill_file, generate_gerbers
 
-
 def main():
     board_name = 'box_out_M8'
     board = BOARD()

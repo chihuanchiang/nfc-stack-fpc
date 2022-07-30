@@ -9,10 +9,8 @@ class Box(Cuboid):
     def __init__(self, board: BOARD, coil_style: CoilStyle, length: int, stack_n: int):
         super().__init__(board, coil_style, length, length, stack_n)
 
+    def _create_top(self, pos: wxPoint, angle: float) -> None:
+        self._create_wing(pos, angle, ceil(self.stack_n / self.side))
 
-    def create_top(self, pos: wxPoint, angle: float) -> None:
-        self.create_wing(pos, angle, ceil(self.stack_n / self.side))
-
-
-    def create_bottom(self, pos: wxPoint, angle: float) -> None:
-        self.create_top(pos, angle)
+    def _create_bottom(self, pos: wxPoint, angle: float) -> None:
+        self._create_top(pos, angle)

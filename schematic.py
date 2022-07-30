@@ -1,6 +1,5 @@
 from skidl import *
 
-
 class Schematic:
 
     def __init__(self, stack_n: int, c_val: str, have_nc: bool = False):
@@ -42,7 +41,6 @@ class Schematic:
 
         for i in range(stack_n):
             self.mux['COM'] & self.c_coil[-1] & self.c_coil[i] & self.mux[f'I{i}']
-
 
     def generate_pcb(self, path: str) -> None:
         generate_pcb(file_=path)

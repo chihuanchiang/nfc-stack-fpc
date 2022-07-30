@@ -5,7 +5,6 @@ from schematic import Schematic
 from station import Station
 from gerber_plot import generate_drill_file, generate_gerbers
 
-
 def main():
     stack_n = round_to_four(8)
     c_val = '300p'
@@ -26,18 +25,17 @@ def main():
     
     coil_style = CoilStyle(coil_d, coil_track_w, coil_track_s, coil_turns)
     board = LoadBoard(pcb_path)
-    station = Station(board, coil_style, length, height, stack_n)
-    station.load_footprints(sch)
+    station = Station(board, sch, coil_style, length, height, stack_n)
     station.layout()
     station.set_zones()
 
     route(board, file_name)
 
     board = LoadBoard(pcb_path)
-    station = Station(board, coil_style, length, height, stack_n)
-    station.load_footprints(sch)
+    station = Station(board, sch, coil_style, length, height, stack_n)
     station.create_outline()
     station.create_coils()
+    station.create_foldline()
 
     SaveBoard(pcb_path_2, board)
     generate_gerbers(board, gbr_path)
@@ -51,9 +49,10 @@ def route(board: BOARD, path: str) -> None:
     ses_path = f'{path}.ses'
 
     if not ExportSpecctraDSN(board, dsn_path):
-        raise Exception(f'Can not export specctra dsn file: {dsn_path}')
+        msg = f'Can not export specctra dsn file: {dsn_path}'
+        raise Exception(msg)
     if system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global') != 0:
-        raise Exception(f'Autorouting failed')
+        raise Exception('Autorouting failed')
 
     print(
         '============================================================',
