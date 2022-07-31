@@ -7,11 +7,9 @@ from gerber_plot import generate_drill_file, generate_gerbers
 
 def main():
     stack_n = round_to_four(8)
-    c_val = '300p'
     length = FromMM(65)
     height = FromMM(60)
     coil_d = FromMM(20)
-    coil_turns = 6
     coil_track_w = FromMM(0.8)
     coil_track_s = FromMM(0.6)
 
@@ -20,10 +18,13 @@ def main():
     pcb_path_2 = f'{file_name}_2.kicad_pcb'
     gbr_path = f'Gerber_{file_name}'
 
+    coil_style = CoilStyle(coil_d, coil_track_w, coil_track_s)
+    c_val = coil_style.get_cap_repr()
+    print('Coil Style:', coil_style, sep='\n')
+
     sch = Schematic(stack_n, c_val)
     sch.generate_pcb(pcb_path)
     
-    coil_style = CoilStyle(coil_d, coil_track_w, coil_track_s, coil_turns)
     board = LoadBoard(pcb_path)
     station = Station(board, sch, coil_style, length, height, stack_n)
     station.layout()
@@ -43,15 +44,16 @@ def main():
 
 
 def route(board: BOARD, path: str) -> None:
-    from os import system
-    router_path = '~/Downloads/freerouting-1.6.2.jar'
+    import os
+    curr_dir = os.path.dirname(__file__)
+    router_path = os.path.join(curr_dir, './autoroute/freerouting-1.6.2.jar')
     dsn_path = f'{path}.dsn'
     ses_path = f'{path}.ses'
 
     if not ExportSpecctraDSN(board, dsn_path):
         msg = f'Can not export specctra dsn file: {dsn_path}'
         raise Exception(msg)
-    if system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global') != 0:
+    if os.system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global') != 0:
         raise Exception('Autorouting failed')
 
     print(

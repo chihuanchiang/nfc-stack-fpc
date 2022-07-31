@@ -1,15 +1,91 @@
 from pcbnew import *
 from utils import *
 from vector import *
+from math import pi
 from typing import Tuple
 
 class CoilStyle:
+    """Properties of a square NFC antenna"""
 
-    def __init__(self, diameter: int, track_w: int, track_s: int, turns: int):
+    def __init__(self, diameter: int, track_w: int, track_s: int, *, frequency: float = 13.56e6, q_factor: float = 100, turns: int = None):
         self.diameter = diameter
         self.track_w = track_w
         self.track_s = track_s
-        self.turns = turns
+        self.freq = frequency
+        self.q = q_factor
+        
+        self.diameter_M = 1e-9 * diameter
+        self.track_w_M = 1e-9 * track_w
+        self.track_s_M = 1e-9 * track_s
+
+        if not turns:
+            self.turns = self._get_optimal_turns()
+
+        self.cap = self._get_required_cap()
+
+    def __repr__(self) -> str:
+        return (
+            f'  diameter: {self.diameter / 1e6} mm\n'
+            f'  track_w: {self.track_w / 1e6} mm\n'
+            f'  track_s: {self.track_s / 1e6} mm\n'
+            f'  frequency: {self.freq / 1e6} MHz\n'
+            f'  q_factor: {self.q}\n'
+            f'  turns: {self.turns}\n'
+            f'  C: {self.get_cap_repr()}F\n'
+            f'  L: {self.get_inductance_repr()}H'
+        )
+
+    def _get_inner_diameter(self, turns: int = None) -> float:
+        """In meters"""
+        if not turns:
+            turns = self.turns
+        return self.diameter_M - 2 * (turns * self.track_w_M + (turns - 1) * self.track_s_M)
+
+    def _get_inductance(self, turns: int = None) -> float:
+        """Returns the inductance of a square antenna"""
+        if not turns:
+            turns = self.turns
+        do = self.diameter_M
+        di = self._get_inner_diameter(turns)
+        d = (do + di) / 2
+        ratio = (do - di) / (do + di)
+        k1, k2, mu = 2.34, 2.75, 4 * pi * 1e-7
+        return k1 * mu * (turns ** 2) * (d / (1 + k2 * ratio))
+
+    def _get_required_cap(self) -> float:
+        return 1 / (4 * pi * pi * (self.freq ** 2) * self._get_inductance())
+
+    def _get_optimal_turns(self) -> int:
+        max_turns = int(self.diameter_M / (self.track_w_M + self.track_s_M) / 2)
+        prev_l = 0
+        for curr_turns in range(1, max_turns + 1):
+            curr_l = self._get_inductance(curr_turns)
+            if (curr_l < prev_l):
+                return curr_turns - 1
+            prev_l = curr_l
+        return max_turns
+
+    def _get_repr(self, val: float) -> str:
+        try:
+            if val < 1e-9:
+                # pico farad repr
+                val *= 1e12
+                return ('%.3g' % val) + 'p'
+            if val < 1e-6:
+                # nano farad repr
+                val *= 1e9
+                return ('%.3g' % val) + 'n'
+            # micro farad repr
+            val *= 1e6
+            return ('%.3g' % val) + 'u'
+        except NameError:
+            return None
+
+    def get_inductance_repr(self) -> str:
+        return self._get_repr(self._get_inductance())
+
+    def get_cap_repr(self) -> str:
+        return self._get_repr(self.cap)
 
 
 class Coil:
@@ -23,9 +99,9 @@ class Coil:
         self.pos = pos
         self.angle = angle
         self.flip = flip
-        self._set_points()
+        self._init_points()
 
-    def _set_points(self) -> None:
+    def _init_points(self) -> None:
         length = self.diameter - self.track_w
         self.start = wxPoint(-length / 2, -length / 2)
         self.end = self.start + wxPoint(-(self.track_w + self.track_s), self.track_w + self.track_s)

@@ -69,4 +69,11 @@ class Station(Cuboid):
         clearance = FromMM(0.5)
         add_zone(self.board, 0, self.length * self.side, -self.length, self.c_coil[0].GetPosition().y - clearance)
         add_zone(self.board, 0, self.length * self.side, self.height, self.height + self.length)
-        add_zone(self.board, self.c_coil[-1].GetPosition().x + clearance, 3 * self.length, self.height / 2, self.height)
+
+        coil_ant = self.coil[-1]
+        add_zone(
+            self.board,
+            self.c_coil[-1].GetPosition().x + clearance,
+            coil_ant.pos.x + coil_ant.diameter / 2 + clearance,
+            coil_ant.pos.y - coil_ant.diameter / 2 - clearance,
+            coil_ant.pos.y + coil_ant.diameter / 2 + clearance)
