@@ -1,6 +1,7 @@
-from pcbnew import *
+from pcbnew import BOARD, FromMM
+
 from box import Box
-from gerber_plot import generate_drill_file, generate_gerbers
+import gerber_plot
 
 def main():
     board_name = 'box_out_M8'
@@ -10,8 +11,8 @@ def main():
     station.create_outline()
 
     output_path = board_name
-    generate_gerbers(board, output_path)
-    generate_drill_file(board, output_path)
+    gerber_plot.generate_gerbers(board, output_path)
+    gerber_plot.generate_drill_file(board, output_path)
 
 
 if __name__ == '__main__':

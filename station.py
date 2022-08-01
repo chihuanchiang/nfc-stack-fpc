@@ -1,10 +1,12 @@
-from pcbnew import *
-from utils import *
-from math import radians
+import math
+import pcbnew
+from pcbnew import BOARD, FromMM, wxPoint
+from typing import List
+
 from coil import Coil, CoilStyle
 from cuboid import Cuboid
 from schematic import Schematic
-from typing import List
+import utils
 
 class Station(Cuboid):
 
@@ -21,16 +23,16 @@ class Station(Cuboid):
         self.coil: List[Coil] = []
         for i in range(self.side):
             for j in range(self.coil_n):
-                self.coil.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 0.5) * l, -0.5 * l), radians(90), True))
+                self.coil.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 0.5) * l, -0.5 * l), math.radians(90), True))
         self.coil.append(Coil(self.board, self.coil_style, wxPoint(2 * self.length + margin_l, self.height - margin_b), 0))
 
     def _init_footprints(self, sch: Schematic) -> None:
-        self.c_coil: List[FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
-        self.c_mux: FOOTPRINT = self.board.FindFootprintByReference(sch.c_mux.ref)
-        self.mux: FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
-        self.mcu: FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
-        self.head_ant: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
-        self.head_ftdi: FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
+        self.c_coil: List[pcbnew.FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
+        self.c_mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.c_mux.ref)
+        self.mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
+        self.mcu: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
+        self.head_ant: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
+        self.head_ftdi: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
 
     def _layout_caps(self) -> None:
         for cap, co in zip(self.c_coil[:-1], self.coil[:-1]):
@@ -67,11 +69,11 @@ class Station(Cuboid):
 
     def set_zones(self) -> None:
         clearance = FromMM(0.5)
-        add_zone(self.board, 0, self.length * self.side, -self.length, self.c_coil[0].GetPosition().y - clearance)
-        add_zone(self.board, 0, self.length * self.side, self.height, self.height + self.length)
+        utils.add_zone(self.board, 0, self.length * self.side, -self.length, self.c_coil[0].GetPosition().y - clearance)
+        utils.add_zone(self.board, 0, self.length * self.side, self.height, self.height + self.length)
 
         coil_ant = self.coil[-1]
-        add_zone(
+        utils.add_zone(
             self.board,
             self.c_coil[-1].GetPosition().x + clearance,
             coil_ant.pos.x + coil_ant.diameter / 2 + clearance,

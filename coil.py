@@ -1,8 +1,10 @@
-from pcbnew import *
-from utils import *
-from vector import *
-from math import pi
+import math
+import pcbnew
+from pcbnew import BOARD, wxPoint
 from typing import Tuple
+
+import utils
+import vector
 
 class CoilStyle:
     """Properties of a square NFC antenna"""
@@ -49,11 +51,11 @@ class CoilStyle:
         di = self._get_inner_diameter(turns)
         d = (do + di) / 2
         ratio = (do - di) / (do + di)
-        k1, k2, mu = 2.34, 2.75, 4 * pi * 1e-7
+        k1, k2, mu = 2.34, 2.75, 4 * math.pi * 1e-7
         return k1 * mu * (turns ** 2) * (d / (1 + k2 * ratio))
 
     def _get_required_cap(self) -> float:
-        return 1 / (4 * pi * pi * (self.freq ** 2) * self._get_inductance())
+        return 1 / (4 * math.pi * math.pi * (self.freq ** 2) * self._get_inductance())
 
     def _get_optimal_turns(self) -> int:
         max_turns = int(self.diameter_M / (self.track_w_M + self.track_s_M) / 2)
@@ -105,14 +107,14 @@ class Coil:
         length = self.diameter - self.track_w
         self.start = wxPoint(-length / 2, -length / 2)
         self.end = self.start + wxPoint(-(self.track_w + self.track_s), self.track_w + self.track_s)
-        curr = copy(self.start)
+        curr = vector.copy(self.start)
         heading = [wxPoint(1, 0), wxPoint(0, 1), wxPoint(-1, 0), wxPoint(0, -1)]
         self.spiral = []
         self.spiral.append(curr)
         for i in range(self.turns):
             for j in range(4):
-                curr += multiplied(heading[j], length)
-                self.spiral.append(copy(curr))
+                curr += vector.multiplied(heading[j], length)
+                self.spiral.append(vector.copy(curr))
                 if (j == 0 and i > 0) or (j == 2):
                     length -= self.track_w + self.track_s
 
@@ -123,26 +125,26 @@ class Coil:
 
     def _translate(self, v: wxPoint) -> None:
         if self.flip:
-            flip_x(v)
-        rotate(v, self.angle)
-        add(v, self.pos)
+            vector.flip_x(v)
+        vector.rotate(v, self.angle)
+        vector.add(v, self.pos)
         
     def create(self) -> None:
-        polyline(self.board, self.spiral, self.track_w, F_Cu)
-        segment(self.board, self.spiral[-1], self.end, self.track_w, B_Cu)
-        via(self.board, self.spiral[-1], self.track_w, F_Cu, B_Cu)
-        via(self.board, self.end, self.track_w, F_Cu, B_Cu)
+        utils.polyline(self.board, self.spiral, self.track_w, pcbnew.F_Cu)
+        utils.segment(self.board, self.spiral[-1], self.end, self.track_w, pcbnew.B_Cu)
+        utils.via(self.board, self.spiral[-1], self.track_w, pcbnew.F_Cu, pcbnew.B_Cu)
+        utils.via(self.board, self.end, self.track_w, pcbnew.F_Cu, pcbnew.B_Cu)
 
     def get_terminal(self) -> Tuple[wxPoint, wxPoint]:
-        return (copy(self.start), copy(self.end))
+        return (vector.copy(self.start), vector.copy(self.end))
 
-    def extend(self, cap: FOOTPRINT) -> None:
+    def extend(self, cap: pcbnew.FOOTPRINT) -> None:
         pads = [p.GetPosition() for p in cap.Pads()]
         pairs = [
             [[self.start, pads[0]], [self.end, pads[1]]],
             [[self.start, pads[1]], [self.end, pads[0]]],
         ]
-        loss = lambda pair: dot_to_dot(pair[0][0], pair[0][1]) + dot_to_dot(pair[1][0], pair[1][1])
+        loss = lambda pair: vector.dot_to_dot(pair[0][0], pair[0][1]) + vector.dot_to_dot(pair[1][0], pair[1][1])
         pair = pairs[0] if loss(pairs[0]) < loss(pairs[1]) else pairs[1]
-        segment(self.board, pair[0][0], pair[0][1], self.track_w, F_Cu)
-        segment(self.board, pair[1][0], pair[1][1], self.track_w, F_Cu)
+        utils.segment(self.board, pair[0][0], pair[0][1], self.track_w, pcbnew.F_Cu)
+        utils.segment(self.board, pair[1][0], pair[1][1], self.track_w, pcbnew.F_Cu)

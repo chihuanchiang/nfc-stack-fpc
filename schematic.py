@@ -1,9 +1,10 @@
-from skidl import *
+import skidl
+from skidl import Part, Net
 
 class Schematic:
 
     def __init__(self, stack_n: int, c_val: str, have_nc: bool = False):
-        c_tmp = Part('Device', 'C', TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
+        c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
         self.c_coil = c_tmp(stack_n + 1, value=c_val)
         self.c_mux = c_tmp(value='0.1u')
         self.mux = Part('74xx', 'CD74HC4067M', footprint='Package_SO:SSOP-24_5.3x8.2mm_P0.65mm')
@@ -43,4 +44,4 @@ class Schematic:
             self.mux['COM'] & self.c_coil[-1] & self.c_coil[i] & self.mux[f'I{i}']
 
     def generate_pcb(self, path: str) -> None:
-        generate_pcb(file_=path)
+        skidl.generate_pcb(file_=path)

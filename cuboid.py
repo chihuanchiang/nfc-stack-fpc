@@ -1,9 +1,11 @@
-from pcbnew import *
-from utils import *
-from vector import *
-from math import radians, tan, ceil
 from abc import ABC, abstractmethod
+import math
+import pcbnew
+from pcbnew import FromMM, wxPoint, BOARD
+
 from coil import CoilStyle
+import utils
+import vector
 
 class Cuboid(ABC):
 
@@ -15,17 +17,17 @@ class Cuboid(ABC):
         self.stack_n = stack_n
         self.outline_width = FromMM(0.1)
         self.side = 4
-        self.coil_n = ceil(stack_n / self.side)
+        self.coil_n = math.ceil(stack_n / self.side)
 
-    def _create_tab(self, width: int = FromMM(4), taper_angle: float = radians(15)) -> None:
-        offset = width * tan(taper_angle)
+    def _create_tab(self, width: int = FromMM(4), taper_angle: float = math.radians(15)) -> None:
+        offset = width * math.tan(taper_angle)
         points = [
             wxPoint(0, 0),
             wxPoint(-width, offset),
             wxPoint(-width, self.height - offset),
             wxPoint(0, self.height),
         ]
-        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
+        utils.polyline(self.board, points, self.outline_width, pcbnew.Edge_Cuts, False)
 
     def _create_wing(self, pos: wxPoint, angle: float, coil_n: int) -> None:
         tolerance = FromMM(0.8)
@@ -42,9 +44,9 @@ class Cuboid(ABC):
         points.append(wxPoint(0, 0))
 
         for p in points:
-            rotate(p, angle)
-            add(p, pos)
-        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
+            vector.rotate(p, angle)
+            vector.add(p, pos)
+        utils.polyline(self.board, points, self.outline_width, pcbnew.Edge_Cuts, False)
 
         points = [
             wxPoint(l, l / 3 + tolerance),
@@ -54,9 +56,9 @@ class Cuboid(ABC):
         ]
 
         for p in points:
-            rotate(p, angle)
-            add(p, pos)
-        polyline(self.board, points, self.outline_width, Edge_Cuts, False)
+            vector.rotate(p, angle)
+            vector.add(p, pos)
+        utils.polyline(self.board, points, self.outline_width, pcbnew.Edge_Cuts, False)
 
     @abstractmethod
     def _create_top(self, pos: wxPoint, angle: float) -> None:
@@ -68,24 +70,24 @@ class Cuboid(ABC):
 
     def create_outline(self) -> None:
         self._create_tab()
-        segment(
+        utils.segment(
             self.board, 
             wxPoint(self.side * self.length, 0), 
             wxPoint(self.side * self.length, self.height), 
             self.outline_width, 
-            Edge_Cuts, 
+            pcbnew.Edge_Cuts, 
             False,
         )
 
         for i in range(self.side):
-            self._create_top(wxPoint((i + 1) * self.length, 0), radians(180))
+            self._create_top(wxPoint((i + 1) * self.length, 0), math.radians(180))
             self._create_bottom(wxPoint(i * self.length, self.height), 0)
 
     def create_foldline(self) -> None:
         diameter = FromMM(0.6)
-        distance = FromMM(1)
+        math.distance = FromMM(1)
         clearance = FromMM(0.075)
-        fold_line(self.board, wxPoint(0, 0), wxPoint(self.side * self.length, 0), diameter, distance, clearance)
-        fold_line(self.board, wxPoint(0, self.height), wxPoint(self.side * self.length, self.height), diameter, distance, clearance)
+        utils.fold_line(self.board, wxPoint(0, 0), wxPoint(self.side * self.length, 0), diameter, math.distance, clearance)
+        utils.fold_line(self.board, wxPoint(0, self.height), wxPoint(self.side * self.length, self.height), diameter, math.distance, clearance)
         for i in range(self.side):
-            fold_line(self.board, wxPoint(i * self.length, 0), wxPoint(i * self.length, self.height), diameter, distance, clearance)
+            utils.fold_line(self.board, wxPoint(i * self.length, 0), wxPoint(i * self.length, self.height), diameter, math.distance, clearance)

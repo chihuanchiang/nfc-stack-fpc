@@ -1,5 +1,5 @@
-from pcbnew import *
-from math import sin, cos, hypot
+import math
+from pcbnew import wxPoint
 
 # ==================== Arithmetic Operators ====================
 def copy(v: wxPoint) -> wxPoint:
@@ -36,7 +36,7 @@ def divided(v: wxPoint, n: float) -> wxPoint:
 
 # ==================== Vector Operators ====================
 def mag(v: wxPoint) -> float:
-    return hypot(v.x, v.y)
+    return math.hypot(v.x, v.y)
 
 
 def inner_prod(u: wxPoint, v: wxPoint) -> int:
@@ -82,8 +82,8 @@ def dot_to_segment(p: wxPoint, start: wxPoint, end: wxPoint) -> float:
 # ==================== Translations ====================
 def rotate(v: wxPoint, angle: float, center: wxPoint = wxPoint(0, 0)) -> None:
     sub(v, center)
-    new_x = v.x * cos(angle) - v.y * sin(angle)
-    new_y = v.x * sin(angle) + v.y * cos(angle)
+    new_x = v.x * math.cos(angle) - v.y * math.sin(angle)
+    new_y = v.x * math.sin(angle) + v.y * math.cos(angle)
     v.x = int(new_x)
     v.y = int(new_y)
     add(v, center)

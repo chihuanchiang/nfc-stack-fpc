@@ -1,12 +1,14 @@
-from pcbnew import *
-from utils import *
+import pcbnew
+from pcbnew import FromMM
+
 from coil import CoilStyle
+import gerber_plot
 from schematic import Schematic
 from station import Station
-from gerber_plot import generate_drill_file, generate_gerbers
+import utils
 
 def main():
-    stack_n = round_to_four(8)
+    stack_n = utils.round_to_four(8)
     length = FromMM(65)
     height = FromMM(60)
     coil_d = FromMM(20)
@@ -25,48 +27,22 @@ def main():
     sch = Schematic(stack_n, c_val)
     sch.generate_pcb(pcb_path)
     
-    board = LoadBoard(pcb_path)
+    board = pcbnew.LoadBoard(pcb_path)
     station = Station(board, sch, coil_style, length, height, stack_n)
     station.layout()
     station.set_zones()
 
-    route(board, file_name)
+    utils.route(board, file_name)
 
-    board = LoadBoard(pcb_path)
+    board = pcbnew.LoadBoard(pcb_path)
     station = Station(board, sch, coil_style, length, height, stack_n)
     station.create_outline()
     station.create_coils()
     station.create_foldline()
 
-    SaveBoard(pcb_path_2, board)
-    generate_gerbers(board, gbr_path)
-    generate_drill_file(board, gbr_path)
-
-
-def route(board: BOARD, path: str) -> None:
-    import os
-    curr_dir = os.path.dirname(__file__)
-    router_path = os.path.join(curr_dir, './autoroute/freerouting-1.6.2.jar')
-    dsn_path = f'{path}.dsn'
-    ses_path = f'{path}.ses'
-
-    if not ExportSpecctraDSN(board, dsn_path):
-        msg = f'Can not export specctra dsn file: {dsn_path}'
-        raise Exception(msg)
-    if os.system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global') != 0:
-        raise Exception('Autorouting failed')
-
-    print(
-        '============================================================',
-        'Freerouting has successfully routed your pcb',
-        f'1. Open {board.GetFileName()} in KiCad and import specctra session file: {ses_path}',
-        '   File > Import > Specctra Section...',
-        '2. Save the file',
-        '   File > Save or cmd + s',
-        '============================================================',
-        sep='\n',
-    )
-    return input('Finished? [y/n]').lower() == 'y'
+    pcbnew.SaveBoard(pcb_path_2, board)
+    gerber_plot.generate_gerbers(board, gbr_path)
+    gerber_plot.generate_drill_file(board, gbr_path)
 
 
 if __name__ == '__main__':
