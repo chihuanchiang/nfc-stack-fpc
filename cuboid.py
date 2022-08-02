@@ -15,7 +15,7 @@ class Cuboid(ABC):
         self.length = length
         self.height = height
         self.stack_n = stack_n
-        self.outline_width = FromMM(0.1)
+        self.outline_width = FromMM(0.2)
         self.side = 4
         self.coil_n = math.ceil(stack_n / self.side)
 

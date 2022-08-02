@@ -1,3 +1,4 @@
+import math
 import os
 import pcbnew
 from pcbnew import wxPoint, BOARD
@@ -16,6 +17,12 @@ def segment(board: BOARD, start: wxPoint, end: wxPoint, width: int, layer: int, 
     seg.SetEnd(end)
     seg.SetWidth(width)
     seg.SetLayer(layer)
+
+
+def circle(board: BOARD, pos: wxPoint, diameter: wxPoint, width: int, layer: int, is_track: bool = True, detail: int = 20) -> None:
+    curr = wxPoint(diameter / 2, 0)
+    points = [vector.rotated(curr, 2 * math.pi * i / detail) + pos for i in range(detail + 1)]
+    polyline(board, points, width, layer, is_track)
 
 
 def polyline(board: BOARD, points: List[wxPoint], width: int, layer: int, is_track: bool = True) -> None:

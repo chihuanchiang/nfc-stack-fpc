@@ -22,7 +22,7 @@ REPORTER = None
 
 def generate_gerbers(pcb, path):
     plot_controller = pcbnew.PLOT_CONTROLLER(pcb)
-    plot_options = plot_controller.GetPlotOptions()
+    plot_options: pcbnew.PCB_PLOT_PARAMS = plot_controller.GetPlotOptions()
     
     # Set General Options:
     plot_options.SetOutputDirectory(path)
@@ -59,8 +59,8 @@ def generate_gerbers(pcb, path):
         ( 'F.Mask', pcbnew.F_Mask, 'Front Mask' ),
         ( 'B.Mask', pcbnew.B_Mask, 'Back Mask' ),
         ( 'Edge.Cuts', pcbnew.Edge_Cuts, 'Edges' ),
-        ( 'Eco1.User', pcbnew.Eco1_User, 'Eco1 User' ),
-        ( 'Eco2.User', pcbnew.Eco2_User, 'Eco1 User' ),
+        # ( 'Eco1.User', pcbnew.Eco1_User, 'Eco1 User' ),
+        # ( 'Eco2.User', pcbnew.Eco2_User, 'Eco1 User' ),
     ]
     
     for layer_info in plot_plan:

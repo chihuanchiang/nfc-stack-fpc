@@ -3,10 +3,19 @@ from skidl import Part, Net
 
 class Schematic:
 
-    def __init__(self, stack_n: int, c_val: str, have_nc: bool = False):
-        c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
-        self.c_coil = c_tmp(stack_n + 1, value=c_val)
-        self.c_mux = c_tmp(value='0.1u')
+    def __init__(self):
+        self.c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
+
+    def generate_pcb(self, path: str) -> None:
+        skidl.generate_pcb(file_=path)
+
+
+class StationSchematic(Schematic):
+
+    def __init__(self, stack_n: int, c_val: str):
+        super().__init__()
+        self.c_coil = self.c_tmp(stack_n + 1, value=c_val)
+        self.c_mux = self.c_tmp(value='0.1u')
         self.mux = Part('74xx', 'CD74HC4067M', footprint='Package_SO:SSOP-24_5.3x8.2mm_P0.65mm')
         self.mcu = Part('ARDUINO_PRO_MINI', 'ARDUINO_PRO_MINI', footprint='ARDUINO_PRO_MINI:ARDUINO_PRO_MINI')
         self.head_ant = Part('Connector', 'Conn_01x04_Male', footprint='Connector:NS-Tech_Grove_1x04_P2mm_Vertical')
@@ -19,15 +28,14 @@ class Schematic:
         self.sda = Net('SDA')
         self.scl = Net('SCL')
 
-        if have_nc:
-            self.c_mux[:] += NC # type: ignore
-            self.mux[:] += NC # type: ignore
-            self.head_ant[:] += NC # type: ignore
-            self.head_ftdi[:] += NC # type: ignore
-            for part in self.c_coil:
-                part[:] += NC # type: ignore
-            for pin in self.mcu:
-                pin += NC # type: ignore
+        # self.c_mux[:] += NC # type: ignore
+        # self.mux[:] += NC # type: ignore
+        # self.head_ant[:] += NC # type: ignore
+        # self.head_ftdi[:] += NC # type: ignore
+        # for part in self.c_coil:
+        #     part[:] += NC # type: ignore
+        # for pin in self.mcu:
+        #     pin += NC # type: ignore
 
         self.vcc += self.mcu['VCC'], self.head_ant[2], self.head_ftdi[2], self.c_mux[1], self.mux['VCC']
         self.gnd += self.mcu['GND'], self.head_ant[1], self.head_ftdi[1], self.c_mux[2], self.mux['GND']
@@ -43,5 +51,13 @@ class Schematic:
         for i in range(stack_n):
             self.mux['COM'] & self.c_coil[-1] & self.c_coil[i] & self.mux[f'I{i}']
 
-    def generate_pcb(self, path: str) -> None:
-        skidl.generate_pcb(file_=path)
+
+class BoxSchematic(Schematic):
+
+    def __init__(self, stack_n: int, c_val: str):
+        super().__init__()
+        self.c_coil_top = self.c_tmp(stack_n - 1, value = c_val)
+        self.c_coil_bottom = self.c_tmp(stack_n - 1, value = c_val)
+
+        for ct, cb in zip(self.c_coil_top, self.c_coil_bottom):
+            ct | cb
