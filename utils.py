@@ -19,7 +19,7 @@ def segment(board: BOARD, start: wxPoint, end: wxPoint, width: int, layer: int, 
     seg.SetLayer(layer)
 
 
-def circle(board: BOARD, pos: wxPoint, diameter: wxPoint, width: int, layer: int, is_track: bool = True, detail: int = 20) -> None:
+def circle(board: BOARD, pos: wxPoint, diameter: int, width: int, layer: int, is_track: bool = True, detail: int = 20) -> None:
     curr = wxPoint(diameter / 2, 0)
     points = [vector.rotated(curr, 2 * math.pi * i / detail) + pos for i in range(detail + 1)]
     polyline(board, points, width, layer, is_track)
@@ -60,11 +60,7 @@ def add_zone(board: BOARD, x1: int, x2: int, y1: int, y2: int) -> None:
     new_area.SetLayerSet(pcbnew.LSET(pcbnew.F_Cu).AddLayer(pcbnew.B_Cu))
 
 
-def fold_line(board: BOARD, start: wxPoint, end: wxPoint, diameter: int, distance: int, clearance: int) -> None:
-    fp = pcbnew.FOOTPRINT(board)
-    fp.SetPosition(wxPoint(0, 0))
-    board.Add(fp)
-
+def fold_line(board: BOARD, start: wxPoint, end: wxPoint, diameter: int, distance: int, outline_width: int, clearance: int) -> None:
     diff = end - start
     length = vector.mag(diff)
     n = int(length) // distance
@@ -72,11 +68,7 @@ def fold_line(board: BOARD, start: wxPoint, end: wxPoint, diameter: int, distanc
     for i in range(n + 1):
         pos = start + vector.multiplied(increment, i)
         if not hit_something(board, pos, diameter, clearance):
-            hole = pcbnew.PAD(fp)
-            hole.SetPosition(pos)
-            hole.SetDrillSize(pcbnew.wxSize(diameter, diameter))
-            hole.SetSize(pcbnew.wxSize(0, 0))
-            fp.Add(hole)
+            circle(board, pos, diameter, outline_width, pcbnew.Edge_Cuts, False)
 
 
 def hit_something(board: BOARD, pos: wxPoint, diameter: int, clearance: int) -> bool:

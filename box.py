@@ -48,7 +48,7 @@ class Box(Cuboid):
 
     def create_tag_marker(self) -> None:
         l = self.length / (self.coil_n + 1) / 2
-        utils.circle(self.board, wxPoint(self.side * self.length - l, self.height + l), self.tag_d, self.outline_width, self.board.GetLayerID('B.Silkscreen'), False)
+        utils.circle(self.board, wxPoint(self.side * self.length - l, self.height + l), self.tag_d, self.outline_width, pcbnew.B_SilkS, False)
 
     def layout(self) -> None:
         self._layout_caps()

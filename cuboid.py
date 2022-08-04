@@ -85,9 +85,9 @@ class Cuboid(ABC):
 
     def create_foldline(self) -> None:
         diameter = FromMM(0.6)
-        math.distance = FromMM(1)
+        distance = FromMM(1)
         clearance = FromMM(0.075)
-        utils.fold_line(self.board, wxPoint(0, 0), wxPoint(self.side * self.length, 0), diameter, math.distance, clearance)
-        utils.fold_line(self.board, wxPoint(0, self.height), wxPoint(self.side * self.length, self.height), diameter, math.distance, clearance)
+        utils.fold_line(self.board, wxPoint(0, 0), wxPoint(self.side * self.length, 0), diameter, distance, self.outline_width, clearance)
+        utils.fold_line(self.board, wxPoint(0, self.height), wxPoint(self.side * self.length, self.height), diameter, distance, self.outline_width, clearance)
         for i in range(self.side):
-            utils.fold_line(self.board, wxPoint(i * self.length, 0), wxPoint(i * self.length, self.height), diameter, math.distance, clearance)
+            utils.fold_line(self.board, wxPoint(i * self.length, 0), wxPoint(i * self.length, self.height), diameter, distance, self.outline_width, clearance)
