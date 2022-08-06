@@ -1,3 +1,4 @@
+import argparse
 import os
 import shutil
 import pcbnew
@@ -11,7 +12,7 @@ import schematic
 from station import Station
 import utils
 
-def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schematic, stack_n: int, length: float, height: float = 60, coil_d: float = 20, coil_track_w: float = 0.8, coil_track_s: float = 0.6) -> None:
+def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schematic, stack_n: int, length: float, height: float, coil_d: float, coil_track_w: float, coil_track_s: float) -> None:
     stack_n = utils.round_to_four(stack_n)
     length = FromMM(length)
     height = FromMM(height)
@@ -99,22 +100,34 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
             file.write('temp folder not deleted\nError: {}\n'.format(err))
 
 
-def generate_station(stack_n: int, length: float):
-    project_name = f'station_N{stack_n}_L{length}'
-    generate(project_name, Station, schematic.StationSchematic, stack_n, length)
-
-
-def generate_box(stack_n: int, length: float):
-    project_name = f'box_N{stack_n}_L{length}'
-    generate(project_name, Box, schematic.BoxSchematic, stack_n, length)
+def export_config(path: str, config: dict) -> None:
+    with open(path, 'w') as file:
+        for k, v in config.items():
+            file.write(f'{k}: {v}\n')
 
 
 def main():
-    stack_n = 4
-    length = 45
-    generate_station(stack_n, length)
-    # generate_box(stack_n, length)
+    parser = argparse.ArgumentParser(
+        description='Generates fabrication files for NFCStack boxes and stations. All lengths are measured in mm.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-b', '--box', action='store_true', help='Generate a box if specified, otherwise generate a station.')
+    parser.add_argument('-H', '--height', type=float, default=60, help='Height. Only applies to stations.')
+    parser.add_argument('-d', '--diameter', type=float, default=20, help='Coil diameter')
+    parser.add_argument('-w', '--track-width', type=float, default=0.8, help='Coil track width')
+    parser.add_argument('-s', '--track-space', type=float, default=0.6, help='Space between coil tracks')
+    parser.add_argument('file', type=str, help='File name')
+    parser.add_argument('size', type=float, help='Size')
+    parser.add_argument('layers', type=int , help='Maximum layers of stacking')
+    args = parser.parse_args()
+    export_config('config.txt', vars(args))
 
+    if args.box:
+        block_type = Box
+        sch_type = schematic.BoxSchematic
+    else:
+        block_type = Station
+        sch_type = schematic.StationSchematic
+    generate(args.file, block_type, sch_type, args.layers, args.size, args.height, args.diameter, args.track_width, args.track_space)
 
 if __name__ == '__main__':
     main()
