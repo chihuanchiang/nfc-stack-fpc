@@ -1,10 +1,13 @@
+from abc import ABC, abstractmethod
+
 import skidl
 from skidl import Part, Net
 
-class Schematic:
+class Schematic(ABC):
 
-    def __init__(self):
-        self.c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
+    @abstractmethod
+    def __init__(self, stack_n: int, c_val: str):
+        pass
 
     def generate_pcb(self, path: str) -> None:
         skidl.generate_pcb(file_=path)
@@ -13,7 +16,7 @@ class Schematic:
 class StationSchematic(Schematic):
 
     def __init__(self, stack_n: int, c_val: str):
-        super().__init__()
+        self.c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
         self.c_coil = self.c_tmp(stack_n + 1, value=c_val)
         self.c_mux = self.c_tmp(value='0.1u')
         self.mux = Part('74xx', 'CD74HC4067M', footprint='Package_SO:SSOP-24_5.3x8.2mm_P0.65mm')
@@ -55,7 +58,7 @@ class StationSchematic(Schematic):
 class BoxSchematic(Schematic):
 
     def __init__(self, stack_n: int, c_val: str):
-        super().__init__()
+        self.c_tmp = Part('Device', 'C', skidl.TEMPLATE, footprint='Capacitor_SMD:C_0603_1608Metric')
         self.c_coil_top = self.c_tmp(stack_n - 1, value = c_val)
         self.c_coil_bottom = self.c_tmp(stack_n - 1, value = c_val)
 
