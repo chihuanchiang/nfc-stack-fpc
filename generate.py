@@ -3,13 +3,15 @@ import shutil
 import pcbnew
 from pcbnew import FromMM
 
+from box import Box
 from coil import CoilStyle
+from cuboid import Cuboid
 import gerber_plot
-from schematic import StationSchematic
+import schematic
 from station import Station
 import utils
 
-def gen_station(project_name: str, stack_n: int, length: float, height: float = 60, coil_d: float = 20, coil_track_w: float = 0.8, coil_track_s: float = 0.6) -> None:
+def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schematic, stack_n: int, length: float, height: float = 60, coil_d: float = 20, coil_track_w: float = 0.8, coil_track_s: float = 0.6) -> None:
     stack_n = utils.round_to_four(stack_n)
     length = FromMM(length)
     height = FromMM(height)
@@ -47,26 +49,21 @@ def gen_station(project_name: str, stack_n: int, length: float, height: float = 
     # Create a PCB from schematic
     try:
         os.chdir(tmp_path)
-        sch = StationSchematic(stack_n, c_val)
+        sch = sch_type(stack_n, c_val)
         sch.generate_pcb(pcb_path)
         os.chdir(cwd_path)
     except Exception as err:
         with open(log_file, 'a') as file:
             file.write(f'PCB not created\nError: {err}')
 
-    # Layout, route, and draw the PCB
+    # Layout, route, and outline the PCB
     try:
         board = pcbnew.LoadBoard(pcb_path)
-        station = Station(board, sch, coil_style, length, height, stack_n)
-        _generate_pre_route(station)
-
-        os.chdir(tmp_path)
-        utils.route(board, project_name)
-        os.chdir(cwd_path)
-
-        board = pcbnew.LoadBoard(pcb_path)
-        station = Station(board, sch, coil_style, length, height, stack_n)
-        _generate_post_route(station)
+        if block_type == Station:
+            block = Station(board, sch, coil_style, length, height, stack_n)
+        else:
+            block = Box(board, sch, coil_style, length, stack_n)
+        board = block.create()
     except Exception as err:
         with open(log_file, 'a') as file:
             file.write(f'PCB not finished\nError: {err}')
@@ -102,22 +99,21 @@ def gen_station(project_name: str, stack_n: int, length: float, height: float = 
             file.write('temp folder not deleted\nError: {}\n'.format(err))
 
 
-def _generate_pre_route(station: Station) -> None:
-    station.layout()
-    station.set_zones()
+def generate_station(stack_n: int, length: float):
+    project_name = f'station_N{stack_n}_L{length}'
+    generate(project_name, Station, schematic.StationSchematic, stack_n, length)
 
 
-def _generate_post_route(station: Station) -> None:
-    station.create_outline()
-    station.create_coils()
-    station.create_foldline()
+def generate_box(stack_n: int, length: float):
+    project_name = f'box_N{stack_n}_L{length}'
+    generate(project_name, Box, schematic.BoxSchematic, stack_n, length)
 
 
 def main():
     stack_n = 4
     length = 45
-    project_name = f'station_N{stack_n}_L{length}'
-    gen_station(project_name, stack_n, length)
+    generate_station(stack_n, length)
+    # generate_box(stack_n, length)
 
 
 if __name__ == '__main__':

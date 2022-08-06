@@ -4,13 +4,15 @@ import pcbnew
 from pcbnew import FromMM, wxPoint, BOARD
 
 from coil import CoilStyle
+from schematic import Schematic
 import utils
 import vector
 
 class Cuboid(ABC):
 
-    def __init__(self, board: BOARD, coil_style: CoilStyle, length: int, height: int, stack_n: int):
+    def __init__(self, board: BOARD, sch: Schematic, coil_style: CoilStyle, length: int, height: int, stack_n: int):
         self.board = board
+        self.sch = sch
         self.coil_style = coil_style
         self.length = length
         self.height = height
@@ -18,6 +20,13 @@ class Cuboid(ABC):
         self.outline_width = FromMM(0.2)
         self.side = 4
         self.coil_n = math.ceil(stack_n / self.side)
+        self._init_coils()
+        self._init_footprints(sch)
+
+    def _update_board(self) -> None:
+        self.board = pcbnew.LoadBoard(self.board.GetFileName())
+        self._init_coils()
+        self._init_footprints(self.sch)
 
     def _create_tab(self, width: int = FromMM(4), taper_angle: float = math.radians(15)) -> None:
         offset = width * math.tan(taper_angle)
@@ -60,15 +69,7 @@ class Cuboid(ABC):
             vector.add(p, pos)
         utils.polyline(self.board, points, self.outline_width, pcbnew.Edge_Cuts, False)
 
-    @abstractmethod
-    def _create_top(self, pos: wxPoint, angle: float) -> None:
-        pass
-
-    @abstractmethod
-    def _create_bottom(self, pos: wxPoint, angle: float) -> None:
-        pass
-
-    def create_outline(self) -> None:
+    def _create_outline(self) -> None:
         self._create_tab()
         utils.segment(
             self.board, 
@@ -83,7 +84,7 @@ class Cuboid(ABC):
             self._create_top(wxPoint((i + 1) * self.length, 0), math.radians(180))
             self._create_bottom(wxPoint(i * self.length, self.height), 0)
 
-    def create_foldline(self) -> None:
+    def _create_foldline(self) -> None:
         diameter = FromMM(0.6)
         distance = FromMM(1)
         clearance = FromMM(0.075)
@@ -91,3 +92,44 @@ class Cuboid(ABC):
         utils.fold_line(self.board, wxPoint(0, self.height), wxPoint(self.side * self.length, self.height), diameter, distance, self.outline_width, clearance)
         for i in range(self.side):
             utils.fold_line(self.board, wxPoint(i * self.length, 0), wxPoint(i * self.length, self.height), diameter, distance, self.outline_width, clearance)
+
+    @abstractmethod
+    def _init_coils(self) -> None:
+        pass
+
+    @abstractmethod
+    def _init_footprints(sch) -> None:
+        pass
+
+    @abstractmethod
+    def _create_top(self, pos: wxPoint, angle: float) -> None:
+        pass
+
+    @abstractmethod
+    def _create_bottom(self, pos: wxPoint, angle: float) -> None:
+        pass
+
+    @abstractmethod
+    def _layout(self) -> None:
+        pass
+
+    @abstractmethod
+    def _route(self) -> None:
+        pass
+
+    @abstractmethod
+    def _create_coils(self) -> None:
+        pass
+
+    @abstractmethod
+    def _create_markers(self) -> None:
+        pass
+
+    def create(self) -> BOARD:
+        self._layout()
+        self._route()
+        self._create_outline()
+        self._create_coils()
+        self._create_foldline()
+        self._create_markers()
+        return self.board

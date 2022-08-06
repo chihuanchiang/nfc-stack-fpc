@@ -1,4 +1,5 @@
 import math
+import os
 import pcbnew
 from pcbnew import BOARD, FromMM, wxPoint
 from typing import List
@@ -11,9 +12,7 @@ import utils
 class Station(Cuboid):
 
     def __init__(self, board: BOARD, sch: StationSchematic, coil_style: CoilStyle, length: int, height: int, stack_n: int):
-        super().__init__(board, coil_style, length, height, stack_n)
-        self._init_coils()
-        self._init_footprints(sch)
+        super().__init__(board, sch, coil_style, length, height, stack_n)
 
     def _init_coils(self) -> None:
         l = self.length / (self.coil_n + 1)
@@ -34,22 +33,19 @@ class Station(Cuboid):
         self.head_ant: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
         self.head_ftdi: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
 
-    def _layout_caps(self) -> None:
-        for cap, co in zip(self.c_coil[:-1], self.coil[:-1]):
-            t = co.get_terminal()
-            cap.SetPosition(wxPoint((t[0].x + t[1].x) / 2, FromMM(3)))
-        t = self.coil[-1].get_terminal()
-        self.c_coil[-1].SetPosition(wxPoint(2 * self.length - FromMM(3), (t[0].y + t[1].y) / 2))
-        self.c_coil[-1].SetOrientationDegrees(90)
-
     def _create_top(self, pos: wxPoint, angle: float) -> None:
         self._create_wing(pos, angle, self.coil_n)
 
     def _create_bottom(self, pos: wxPoint, angle: float) -> None:
         self._create_wing(pos, angle, 0) # No coils at the bottom
 
-    def layout(self) -> None:
-        self._layout_caps()
+    def _layout(self) -> None:
+        for cap, co in zip(self.c_coil[:-1], self.coil[:-1]):
+            t = co.get_terminal()
+            cap.SetPosition(wxPoint((t[0].x + t[1].x) / 2, FromMM(3)))
+        t = self.coil[-1].get_terminal()
+        self.c_coil[-1].SetPosition(wxPoint(2 * self.length - FromMM(3), (t[0].y + t[1].y) / 2))
+        self.c_coil[-1].SetOrientationDegrees(90)
         
         self.head_ftdi.SetPosition(wxPoint(self.length / 2 + FromMM(4), self.height - FromMM(5)))
         self.head_ftdi.SetOrientationDegrees(-90)
@@ -62,16 +58,11 @@ class Station(Cuboid):
         self.c_mux.SetPosition(self.mux.GetPosition() + wxPoint(FromMM(8), 0))
         self.c_mux.SetOrientationDegrees(90)
 
-    def create_coils(self) -> None:
-        for cap, co in zip(self.c_coil, self.coil):
-            co.create()
-            co.extend(cap)
-
-    def set_zones(self) -> None:
+    def _route(self) -> None:
+        # Set keepout zones
         clearance = FromMM(0.5)
         utils.add_zone(self.board, 0, self.length * self.side, -self.length, self.c_coil[0].GetPosition().y - clearance)
         utils.add_zone(self.board, 0, self.length * self.side, self.height, self.height + self.length)
-
         coil_ant = self.coil[-1]
         utils.add_zone(
             self.board,
@@ -79,3 +70,16 @@ class Station(Cuboid):
             coil_ant.pos.x + coil_ant.diameter / 2 + clearance,
             coil_ant.pos.y - coil_ant.diameter / 2 - clearance,
             coil_ant.pos.y + coil_ant.diameter / 2 + clearance)
+
+        # Call third-party router
+        project_name = os.path.splitext(self.board.GetFileName())[0]
+        utils.route(self.board, project_name)
+        self._update_board()
+
+    def _create_coils(self) -> None:
+        for cap, co in zip(self.c_coil, self.coil):
+            co.create()
+            co.extend(cap)
+
+    def _create_markers(self) -> None:
+        pass
