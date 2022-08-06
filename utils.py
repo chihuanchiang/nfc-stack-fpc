@@ -80,8 +80,8 @@ def hit_something(board: BOARD, pos: wxPoint, diameter: int, clearance: int) -> 
 
 
 def route(board: BOARD, path: str) -> None:
-    curr_dir = os.path.dirname(__file__)
-    router_path = os.path.join(curr_dir, './tools/freerouting-1.6.2.jar')
+    file_dir = os.path.dirname(__file__)
+    router_path = os.path.join(file_dir, 'tools/freerouting-1.6.2.jar').replace('\\', '/')
     dsn_path = f'{path}.dsn'
     ses_path = f'{path}.ses'
 
