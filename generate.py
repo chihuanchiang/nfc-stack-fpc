@@ -7,6 +7,7 @@ from pcbnew import FromMM
 from box import Box
 from coil import CoilStyle
 from cuboid import Cuboid
+import fabrication
 import gerber_plot
 import schematic
 from station import Station
@@ -29,6 +30,7 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
         tmp_output_path = os.path.join(tmp_path, project_name + '-Gerber').replace('\\', '/')
         pcb_path = os.path.join(tmp_path, project_name + '.kicad_pcb').replace('\\', '/')
         output_path = os.path.join(cwd_path, project_name + '-Gerber').replace('\\', '/')
+        pos_path = os.path.join(cwd_path, project_name + '-pos.csv').replace('\\', '/')
         log_file = os.path.join(cwd_path, 'log.txt').replace('\\', '/')
         if os.path.exists(log_file):
             os.remove(log_file)
@@ -91,6 +93,13 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
     except Exception as err:
         with open(log_file, 'a') as file:
             file.write(f'ZIP file not created\nError: {err}')
+
+    # Export pick and place (pos) file
+    try:
+        fabrication.export_pos(board, pos_path)
+    except Exception as err:
+        with open(log_file, 'a') as file:
+            file.write(f'pos file not exported\nError: {err}')
 
     # Remove temp folder
     try:

@@ -33,8 +33,8 @@ class CoilStyle:
             f'  frequency: {self.freq / 1e6} MHz\n'
             f'  q_factor: {self.q}\n'
             f'  turns: {self.turns}\n'
-            f'  C: {self.get_cap_repr()}F\n'
-            f'  L: {self.get_inductance_repr()}H'
+            f'  C: {self.get_cap_repr()}\n'
+            f'  L: {self.get_inductance_repr()}'
         )
 
     def _get_inner_diameter(self, turns: int = None) -> float:
@@ -84,10 +84,10 @@ class CoilStyle:
             return None
 
     def get_inductance_repr(self) -> str:
-        return self._get_repr(self._get_inductance())
+        return self._get_repr(self._get_inductance()) + 'H'
 
     def get_cap_repr(self) -> str:
-        return self._get_repr(self.cap)
+        return self._get_repr(self.cap) + 'F'
 
 
 class Coil:
