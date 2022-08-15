@@ -82,13 +82,14 @@ def hit_something(board: BOARD, pos: wxPoint, diameter: int, clearance: int) -> 
 def route(board: BOARD, path: str) -> None:
     file_dir = os.path.dirname(__file__)
     router_path = os.path.join(file_dir, 'tools/freerouting-1.6.2.jar').replace('\\', '/')
+    rule_path = os.path.join(file_dir, 'tools/template.rules').replace('\\', '/')
     dsn_path = f'{path}.dsn'
     ses_path = f'{path}.ses'
 
     if not pcbnew.ExportSpecctraDSN(board, dsn_path):
         msg = f'Can not export specctra dsn file: {dsn_path}'
         raise Exception(msg)
-    if os.system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global') != 0:
+    if os.system(f'java -jar {router_path} -de {dsn_path} -do {ses_path} -mp 100 -us global -dr {rule_path}') != 0:
         raise Exception('Autorouting failed')
 
     print(

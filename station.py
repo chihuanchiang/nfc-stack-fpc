@@ -17,7 +17,7 @@ class Station(Cuboid):
     def _init_coils(self) -> None:
         l = self.length / (self.coil_n + 1)
         margin_b = max(self.coil_style.diameter / 2, FromMM(13)) + FromMM(2)
-        margin_l = max(self.coil_style.diameter / 2, FromMM(12)) + FromMM(2)
+        margin_l = max(self.coil_style.diameter / 2, FromMM(12)) + FromMM(10)
 
         self.coil: List[Coil] = []
         for i in range(self.side):
@@ -27,7 +27,6 @@ class Station(Cuboid):
 
     def _init_footprints(self, sch: StationSchematic) -> None:
         self.c_coil: List[pcbnew.FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
-        self.c_mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.c_mux.ref)
         self.mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
         self.mcu: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
         self.head_ant: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
@@ -51,12 +50,10 @@ class Station(Cuboid):
         self.head_ftdi.SetOrientationDegrees(-90)
         self.mcu.SetPosition(wxPoint(self.length / 2, self.head_ftdi.GetY() - FromMM(20)))
         self.mcu.SetOrientationDegrees(180)
-        self.head_ant.SetPosition(wxPoint(self.length / 2 + FromMM(4), self.mcu.GetY() - FromMM(23)))
+        self.head_ant.SetPosition(wxPoint(self.length / 2 + FromMM(2), self.mcu.GetY() - FromMM(22)))
         self.head_ant.SetOrientationDegrees(-90)
         self.mux.SetPosition(wxPoint(1.5 * self.length, 0.5 * self.height))
         self.mux.SetOrientationDegrees(-90)
-        self.c_mux.SetPosition(self.mux.GetPosition() + wxPoint(FromMM(8), 0))
-        self.c_mux.SetOrientationDegrees(90)
 
     def _route(self) -> None:
         # Set keepout zones
