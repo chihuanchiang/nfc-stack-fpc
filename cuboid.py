@@ -21,12 +21,12 @@ class Cuboid(ABC):
         self.side = 4
         self.coil_n = math.ceil(stack_n / self.side)
         self._init_coils()
-        self._init_footprints(sch)
+        self._init_footprints()
 
     def _update_board(self) -> None:
         self.board = pcbnew.LoadBoard(self.board.GetFileName())
         self._init_coils()
-        self._init_footprints(self.sch)
+        self._init_footprints()
 
     def _create_tab(self, width: int = FromMM(4), taper_angle: float = math.radians(15)) -> None:
         offset = width * math.tan(taper_angle)
@@ -98,7 +98,7 @@ class Cuboid(ABC):
         pass
 
     @abstractmethod
-    def _init_footprints(sch) -> None:
+    def _init_footprints(self) -> None:
         pass
 
     @abstractmethod

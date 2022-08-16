@@ -25,9 +25,9 @@ class Box(Cuboid):
                     self.coil_top.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 0.5) * l, -0.5 * l), math.radians(90), True))
                     self.coil_bottom.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 1.5) * l, 0.5 * l + self.height), math.radians(90)))
 
-    def _init_footprints(self, sch: BoxSchematic) -> None:
-        self.c_coil_top: List[pcbnew.FOOTPRINT] = [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil_top]
-        self.c_coil_bottom: List[pcbnew.FOOTPRINT] = [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil_bottom]
+    def _init_footprints(self) -> None:
+        self.c_coil_top: List[pcbnew.FOOTPRINT] = [self.board.FindFootprintByReference(p.ref) for p in self.sch.c_coil_top]
+        self.c_coil_bottom: List[pcbnew.FOOTPRINT] = [self.board.FindFootprintByReference(p.ref) for p in self.sch.c_coil_bottom]
 
     def _create_top(self, pos: wxPoint, angle: float) -> None:
         self._create_wing(pos, angle, self.coil_n)

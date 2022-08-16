@@ -25,12 +25,12 @@ class Station(Cuboid):
                 self.coil.append(Coil(self.board, self.coil_style, wxPoint(i * self.length + (j + 0.5) * l, -0.5 * l), math.radians(90), True))
         self.coil.append(Coil(self.board, self.coil_style, wxPoint(2 * self.length + margin_l, self.height - margin_b), 0))
 
-    def _init_footprints(self, sch: StationSchematic) -> None:
-        self.c_coil: List[pcbnew.FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in sch.c_coil]
-        self.mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mux.ref)
-        self.mcu: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.mcu.ref)
-        self.head_ant: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ant.ref)
-        self.head_ftdi: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(sch.head_ftdi.ref)
+    def _init_footprints(self) -> None:
+        self.c_coil: List[pcbnew.FOOTPRINT]= [self.board.FindFootprintByReference(p.ref) for p in self.sch.c_coil]
+        self.mux: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(self.sch.mux.ref)
+        self.mcu: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(self.sch.mcu.ref)
+        self.head_ant: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(self.sch.head_ant.ref)
+        self.head_ftdi: pcbnew.FOOTPRINT = self.board.FindFootprintByReference(self.sch.head_ftdi.ref)
 
     def _create_top(self, pos: wxPoint, angle: float) -> None:
         self._create_wing(pos, angle, self.coil_n)
