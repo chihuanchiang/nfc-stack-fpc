@@ -13,7 +13,7 @@ import schematic
 from station import Station
 import utils
 
-def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schematic, stack_n: int, length: float, height: float, coil_d: float, coil_track_w: float, coil_track_s: float) -> None:
+def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schematic, stack_n: int, length: float, height: float, coil_d: float, coil_track_w: float, coil_track_s: float, keep_tmp: bool) -> None:
     stack_n = utils.round_to_four(stack_n)
     length = FromMM(length)
     height = FromMM(height)
@@ -29,6 +29,7 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
         tmp_path = os.path.join(cwd_path, 'tmp').replace('\\', '/')
         tmp_output_path = os.path.join(tmp_path, project_name + '-Gerber').replace('\\', '/')
         pcb_path = os.path.join(tmp_path, project_name + '.kicad_pcb').replace('\\', '/')
+        pcb_path_final = os.path.join(tmp_path, project_name + '_final.kicad_pcb').replace('\\', '/')
         output_path = os.path.join(cwd_path, project_name + '-Gerber').replace('\\', '/')
         pos_path = os.path.join(cwd_path, project_name + '-pos.csv').replace('\\', '/')
         log_file = os.path.join(cwd_path, 'log.txt').replace('\\', '/')
@@ -67,6 +68,7 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
         else:
             block = Box(board, sch, coil_style, length, stack_n)
         board = block.create()
+        pcbnew.SaveBoard(pcb_path_final, board)
     except Exception as err:
         with open(log_file, 'a') as file:
             file.write(f'PCB not finished\nError: {err}')
@@ -101,12 +103,13 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
         with open(log_file, 'a') as file:
             file.write(f'pos file not exported\nError: {err}')
 
-    # Remove temp folder
-    try:
-        shutil.rmtree(tmp_path, ignore_errors=True)
-    except Exception as err:
-        with open(log_file, 'a') as file:
-            file.write('temp folder not deleted\nError: {}\n'.format(err))
+    if not keep_tmp:
+        # Remove temp folder
+        try:
+            shutil.rmtree(tmp_path, ignore_errors=True)
+        except Exception as err:
+            with open(log_file, 'a') as file:
+                file.write('temp folder not deleted\nError: {}\n'.format(err))
 
 
 def export_config(path: str, config: dict) -> None:
@@ -124,6 +127,7 @@ def main():
     parser.add_argument('-d', '--diameter', type=float, default=20, help='Coil diameter')
     parser.add_argument('-w', '--track-width', type=float, default=0.8, help='Coil track width')
     parser.add_argument('-s', '--track-space', type=float, default=0.6, help='Space between coil tracks')
+    parser.add_argument('-k', '--keep-tmp-files', action='store_true', help='Keep temporary files')
     parser.add_argument('file', type=str, help='File name')
     parser.add_argument('size', type=float, help='Size')
     parser.add_argument('layers', type=int , help='Maximum layers of stacking')
@@ -136,7 +140,7 @@ def main():
     else:
         block_type = Station
         sch_type = schematic.StationSchematic
-    generate(args.file, block_type, sch_type, args.layers, args.size, args.height, args.diameter, args.track_width, args.track_space)
+    generate(args.file, block_type, sch_type, args.layers, args.size, args.height, args.diameter, args.track_width, args.track_space, args.keep_tmp_files)
 
 if __name__ == '__main__':
     main()
