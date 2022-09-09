@@ -66,11 +66,11 @@ def dot_to_line(p: wxPoint, start: wxPoint, end: wxPoint) -> float:
 
 def dot_to_segment(p: wxPoint, start: wxPoint, end: wxPoint) -> float:
     """The segment is treated as a dot if start and end are the same point"""
-    v1 = p - start
-    v2 = end - start
-    if v2 == wxPoint(0, 0):
+    if start == end:
         return dot_to_dot(p, start)
 
+    v1 = p - start
+    v2 = end - start
     pv = projection_value(v1, v2)
     if pv < 0:
         return dot_to_dot(p, start)
