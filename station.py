@@ -83,48 +83,98 @@ class Station(Cuboid):
             self._autoroute()
             return
 
+        track_w = FromMM(0.4)
+        track_clearance = FromMM(0.6)
+        pad_clearance = FromMM(0.4)
+        hf_track_clearance_x = FromMM(2)
+        hf_track_clearance_y = FromMM(4)
+        hf_pad_clearance = FromMM(1)
         grid_size = FromMM(0.2)
-        grid = path_finder.Grid(0, self.length * self.side, self.c_coil[0].GetY(), self.height, grid_size)
+        grid = path_finder.Grid(self.board, 0, self.length * self.side, self.c_coil[0].GetY(), self.height, grid_size)
         pads = self.board.GetPads()
-        tracks = [t for t in self.board.Tracks() if type(t) == pcbnew.PCB_TRACK]
-        vias = [v for v in self.board.Tracks() if type(v) == pcbnew.PCB_VIA]
-        mux_coil_pin = [9, 8, 7, 6, 5, 4, 3, 2, 23, 22, 21, 20, 19, 18, 17, 16]
-        mux_coil_pin = ["9", "8", "7", "6", "5", "4", "3", "2", "23", "22", "21", "20", "19", "18", "17", "16"]
-        mux_ant_pin = "1"
+        hf_pad = ["9", "8", "7", "6", "5", "4", "3", "2", "23", "22", "21", "20", "19", "18", "17", "16", "1"]
+        mux_coil_pad = hf_pad[:-1]
+        mux_ant_pad = hf_pad[-1]
 
         # ==================== Add walls to all pads ====================
-        grid.graph.reset_walls()
-        pad_clearance = FromMM(1)
         for pad in pads:
-            grid.add_wall_pad(pad, pad_clearance)
-        # Reserve space for the return path that will possibly pass by
-        grid.add_wall_pad(self.head_ant.FindPadByNumber('1'), FromMM(3))
+            if pad.GetParent().GetReference() == 'U1' and pad.GetName() in hf_pad:
+                grid.add_wall_pad(pad, hf_pad_clearance)
+            else:
+                grid.add_wall_pad(pad, pad_clearance)
 
         # ==================== Route traces from the mux to capacitors ====================
-        pads_mux_cap: List[Tuple[pcbnew.PAD, pcbnew.PAD]] = [(self.mux.FindPadByNumber(mux_coil_pin[i]), self.c_coil[i].Pads()[1]) for i in range(self.stack_n)]
+        pads_mux_cap: List[Tuple[pcbnew.PAD, pcbnew.PAD]] = [(self.mux.FindPadByNumber(mux_coil_pad[i]), self.c_coil[i].Pads()[1]) for i in range(self.stack_n)]
         pads_mux_cap.sort(key=lambda e: abs(e[0].GetX() - e[1].GetX()), reverse=True)
-        pads_mux_cap.append((self.mux.FindPadByNumber(mux_ant_pin), self.c_coil[-1].Pads()[0]))
+        pads_mux_cap.append((self.mux.FindPadByNumber(mux_ant_pad), self.c_coil[-1].Pads()[0]))
 
-        for src_pad, dst_pad in pads_mux_cap:
-            grid.graph.reset_nodes()
-            print(f"{src_pad.GetName()} -> {dst_pad.GetName()}")
-            src_pos = src_pad.GetPosition()
-            dst_pos = dst_pad.GetPosition()
-            src = grid.get_node(src_pos)
-            dst = grid.get_node(dst_pos)
+        # Add a spacer to reserve space for the return path that will possibly pass by
+        spacer_pos = self.head_ant.FindPadByNumber('1').GetPosition() + wxPoint(FromMM(2.5), 0)
+        spacer_start = grid.pcb_to_grid(spacer_pos + wxPoint(0, FromMM(-3)))
+        spacer_end = grid.pcb_to_grid(spacer_pos + wxPoint(0, FromMM(6)))
+        grid.graph.add_wall_rect(spacer_start[0], spacer_end[0], spacer_start[1], spacer_end[1])
 
-            grid.sub_wall_pad(src_pad, pad_clearance)
-            grid.sub_wall_pad(dst_pad, pad_clearance)
-            path = path_finder.find_path(grid.graph, src, dst)
-            grid.add_wall_pad(src_pad, pad_clearance)
-            grid.add_wall_pad(dst_pad, pad_clearance)
+        traces_mux_cap = [grid.route_pad_to_pad(src_pad, dst_pad, self.coil_style.track_w, pcbnew.F_Cu, hf_pad_clearance, hf_track_clearance_x, hf_track_clearance_y)
+                          for src_pad, dst_pad in pads_mux_cap]
 
-            grid.add_wall_path(path, FromMM(2), FromMM(4))
+        # Remove the spacer
+        grid.graph.sub_wall_rect(spacer_start[0], spacer_end[0], spacer_start[1], spacer_end[1])
 
-            vertices = path_finder.get_vertices(path)
-            point = [grid.grid_to_pcb(p.x, p.y) for p in vertices]
-            point[0], point[-1] = src_pos, dst_pos
-            utils.polyline(self.board, point, self.coil_style.track_w, pcbnew.F_Cu)
+        # ==================== Route traces from the mcu to the ftdi header ====================
+        pads_mcu_ftdi = [
+            (self.mcu.FindPadByNumber('JP1_2'), self.head_ftdi.FindPadByNumber('4')),
+            (self.mcu.FindPadByNumber('JP1_3'), self.head_ftdi.FindPadByNumber('3')),
+            (self.mcu.FindPadByNumber('JP1_4'), self.head_ftdi.FindPadByNumber('2')),
+            (self.mcu.FindPadByNumber('JP1_5'), self.head_ftdi.FindPadByNumber('1')),
+            (self.mcu.FindPadByNumber('JP1_5'), self.mcu.FindPadByNumber('JP1_6')),
+        ]
+        traces_mcu_ftdi = [grid.route_pad_to_pad(src_pad, dst_pad, track_w, pcbnew.F_Cu, pad_clearance, track_clearance, track_clearance)
+                           for src_pad, dst_pad in pads_mcu_ftdi]
+
+        # ==================== Route traces from the antenna header to the mcu ====================
+        pads_ant_mcu = [
+            (self.head_ant.FindPadByNumber('3'), self.mcu.FindPadByNumber('JP2_1')),
+            (self.head_ant.FindPadByNumber('4'), self.mcu.FindPadByNumber('JP2_2')),
+            (self.head_ant.FindPadByNumber('2'), self.mcu.FindPadByNumber('JP1_4')),
+            (self.head_ant.FindPadByNumber('1'), self.mcu.FindPadByNumber('JP1_5')),
+        ]
+        traces_ant_mcu = [grid.route_pad_to_pad(src_pad, dst_pad, track_w, pcbnew.F_Cu, pad_clearance, track_clearance, track_clearance)
+                          for src_pad, dst_pad in pads_ant_mcu]
+
+        # ==================== Route traces from the mux to the mcu ====================
+        pads_mux_mcu = [
+            (self.mux.FindPadByNumber('10'), self.mcu.FindPadByNumber('JP7_3')),
+            (self.mux.FindPadByNumber('11'), self.mcu.FindPadByNumber('JP7_4')),
+            (self.mux.FindPadByNumber('14'), self.mcu.FindPadByNumber('JP7_5')),
+            (self.mux.FindPadByNumber('13'), self.mcu.FindPadByNumber('JP7_6')),
+        ]
+
+        # Add a spacer to route these traces below the mux
+        spacer_start = grid.pcb_to_grid(wxPoint(self.length - FromMM(2), 0))
+        spacer_end = grid.pcb_to_grid(wxPoint(self.length + FromMM(2), pads_mux_mcu[0][0].GetY()))
+        grid.graph.add_wall_rect(spacer_start[0], spacer_end[0], spacer_start[1], spacer_end[1])
+
+        traces_mux_mcu = [grid.route_pad_to_pad(src_pad, dst_pad, track_w, pcbnew.F_Cu, pad_clearance, track_clearance, track_clearance)
+                          for src_pad, dst_pad in pads_mux_mcu]
+
+        # Remove the spacer
+        grid.graph.sub_wall_rect(spacer_start[0], spacer_end[0], spacer_start[1], spacer_end[1])
+
+        # ==================== Reset walls and add walls to all pads ====================
+        grid.graph.reset_walls()
+        for pad in pads:
+            if pad.GetParent().GetReference() == 'U1' and pad.GetName() in hf_pad:
+                grid.add_wall_pad(pad, hf_pad_clearance)
+            else:
+                grid.add_wall_pad(pad, pad_clearance)
+
+        # ==================== Route VCC and GND from the ftdi header to the mux (bottom layer) ====================
+        pads_ftdi_mux = [
+            (self.head_ftdi.FindPadByNumber('1'), self.mux.FindPadByNumber('12')),
+            (self.head_ftdi.FindPadByNumber('2'), self.mux.FindPadByNumber('24')),
+        ]
+        traces_ftdi_mux = [grid.route_pad_to_pad(src_pad, dst_pad, track_w, pcbnew.B_Cu, pad_clearance, track_clearance, track_clearance)
+                          for src_pad, dst_pad in pads_ftdi_mux]
 
     def _create_coils(self) -> None:
         for cap, co in zip(self.c_coil, self.coil):

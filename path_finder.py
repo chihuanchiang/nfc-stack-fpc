@@ -4,6 +4,8 @@ import pcbnew
 from pcbnew import wxPoint
 from typing import List, Tuple, Iterator
 
+import utils
+
 DIAGONAL = math.sqrt(2)
 RECT_SHAPES = {
     pcbnew.PAD_SHAPE_RECT,
@@ -133,7 +135,8 @@ class Graph:
 
 class Grid:
 
-    def __init__(self, x1: int, x2: int, y1: int, y2: int, size: int):
+    def __init__(self, board: pcbnew.BOARD, x1: int, x2: int, y1: int, y2: int, size: int):
+        self.board = board
         if x1 > x2:
             x1, x2 = x2, x1
         if y1 > y2:
@@ -178,6 +181,38 @@ class Grid:
         h = int(height / self.size)
         for n in path:
             self.graph.add_wall_diamond(n.x, n.y, w, h)
+
+    def route_pad_to_pad(
+            self,
+            src_pad: pcbnew.PAD,
+            dst_pad: pcbnew.PAD,
+            width: int,
+            layer: int,
+            pad_clearance: int,
+            track_clearance_x: int,
+            track_clearance_y: int,
+        ) -> List[wxPoint]:
+
+        self.graph.reset_nodes()
+        print(f"{src_pad.GetParent().GetReference()}:{src_pad.GetName()} -> {dst_pad.GetParent().GetReference()}:{dst_pad.GetName()}")
+        src_pos = src_pad.GetPosition()
+        dst_pos = dst_pad.GetPosition()
+        src = self.get_node(src_pos)
+        dst = self.get_node(dst_pos)
+
+        self.sub_wall_pad(src_pad, pad_clearance)
+        self.sub_wall_pad(dst_pad, pad_clearance)
+        path = find_path(self.graph, src, dst)
+        self.add_wall_pad(src_pad, pad_clearance)
+        self.add_wall_pad(dst_pad, pad_clearance)
+
+        self.add_wall_path(path, track_clearance_x, track_clearance_y)
+
+        vertices = get_vertices(path)
+        trace = [self.grid_to_pcb(p.x, p.y) for p in vertices]
+        trace[0], trace[-1] = src_pos, dst_pos
+        utils.polyline(self.board, trace, width, layer)
+        return trace
 
 
 class PriorityQueue:
