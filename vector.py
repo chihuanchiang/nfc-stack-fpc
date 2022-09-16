@@ -1,5 +1,6 @@
 import math
 from pcbnew import wxPoint
+from typing import List, Tuple
 
 # ==================== Arithmetic Operators ====================
 def copy(v: wxPoint) -> wxPoint:
@@ -79,6 +80,37 @@ def dot_to_segment(p: wxPoint, start: wxPoint, end: wxPoint) -> float:
     return dot_to_line(p, start, end)
 
 
+def intersection(start1: wxPoint, end1: wxPoint, start2: wxPoint, end2: wxPoint) -> Tuple[wxPoint, int]:
+    """Calculates the intersection of two line segments.
+
+    Returns:
+        A tuple containing the intersection point and the state of intersection.
+        state:
+            -2: invalid
+            -1: parallel
+            0: on none of the segments
+            1: on segment 1
+            2: on segment 2
+            3: on both segments
+    """
+    if start1 == end1 or start2 == end2:
+        return (wxPoint(0, 0), -2)
+
+    v1 = end1 - start1
+    v2 = end2 - start2
+    v3 = start2 - start1
+    divisor = v1.x * v2.y - v1.y * v2.x
+    t_divident = v3.x * v2.y - v3.y * v2.x
+    u_divident = v3.x * v1.y - v3.y * v1.x
+
+    if divisor == 0:
+        return (wxPoint(0, 0), -1)
+
+    t = t_divident / divisor
+    u = u_divident / divisor
+    return (start1 + multiplied(v1, t), bool(0 <= t <= 1) + 2 * bool(0 <= u <= 1))
+
+
 # ==================== Translations ====================
 def rotate(v: wxPoint, angle: float, center: wxPoint = wxPoint(0, 0)) -> None:
     sub(v, center)
@@ -109,3 +141,23 @@ def flip_y(v: wxPoint, center: wxPoint = wxPoint(0, 0)) -> None:
 
 def flipped_y(v: wxPoint, center: wxPoint = wxPoint(0, 0)) -> wxPoint:
     return wxPoint(v.x, 2 * center.y - v.y)
+
+
+# ==================== Path Translations ====================
+def offset(path: List[wxPoint], distance: int) -> List[wxPoint]:
+    """Shifts `path` to the right by `distance`, and returns the shifted path."""
+    segment = [[path[i], path[i + 1]] for i in range(len(path) - 1)]
+    for s in segment:
+        u = s[1] - s[0]
+        rotate(u, math.radians(90))
+        mult(u, distance / mag(u))
+        s[0] += u
+        s[1] += u
+
+    shifted = [segment[0][0]]
+    for i in range(len(segment) - 1):
+        p, state = intersection(segment[i][0], segment[i][1], segment[i + 1][0], segment[i + 1][1])
+        if state >= 0:
+            shifted.append(p)
+    shifted.append(segment[-1][1])
+    return shifted

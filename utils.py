@@ -1,3 +1,4 @@
+import math
 import os
 import pcbnew
 from pcbnew import wxPoint, BOARD
@@ -18,7 +19,18 @@ def segment(board: BOARD, start: wxPoint, end: wxPoint, width: int, layer: int, 
     seg.SetLayer(layer)
 
 
-def circle(board: BOARD, pos: wxPoint, diameter: int, width: int, layer: int, is_track: bool = True,) -> None:
+def elbow(board: BOARD, start: wxPoint, end: wxPoint, width: int, layer: int, is_track: bool = True) -> None:
+    v = end - start
+    l = min(abs(v.x), abs(v.y))
+    diagonal = wxPoint(l, l)
+    if v.x < 0:
+        diagonal.x *= -1
+    if v.y < 0:
+        diagonal.y *= -1
+    polyline(board, [start, end - diagonal, end], width, layer, is_track)
+
+
+def circle(board: BOARD, pos: wxPoint, diameter: int, width: int, layer: int, is_track: bool = True) -> None:
     seg = pcbnew.PCB_TRACK(board) if is_track else pcbnew.PCB_SHAPE(board)
     board.Add(seg)
     seg.SetShape(pcbnew.SHAPE_T_CIRCLE)
