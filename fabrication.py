@@ -1,12 +1,16 @@
 import csv
 import pcbnew
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 def _write_csv(path: str, content: List[Dict[str, Any]]) -> None:
     with open(path, 'w', newline='') as file:
         wtr = csv.DictWriter(file, fieldnames=content[0].keys())
         wtr.writeheader()
         wtr.writerows(content)
+
+
+def _get_capacitors(board: pcbnew.BOARD) -> List[pcbnew.FOOTPRINT]:
+    return [fp for fp in board.GetFootprints() if fp.GetReference()[0] == "C"]
 
 
 def _field_designator(fp: pcbnew.FOOTPRINT) -> str:
@@ -38,7 +42,7 @@ def _field_comment(fp: pcbnew.FOOTPRINT) -> str:
 
 
 def _field_description(fp: pcbnew.FOOTPRINT) -> str:
-    return None
+    return fp.GetDescription()
 
 
 def _field_pins(fp: pcbnew.FOOTPRINT) -> str:
@@ -46,7 +50,7 @@ def _field_pins(fp: pcbnew.FOOTPRINT) -> str:
 
 
 def export_pos(board: pcbnew.BOARD, path: str) -> None:
-    fps = board.GetFootprints()
+    fps = _get_capacitors(board)
     fps.sort(key=_field_designator)
     pos_info = [
         {
@@ -61,3 +65,33 @@ def export_pos(board: pcbnew.BOARD, path: str) -> None:
         for fp in fps
     ]
     _write_csv(path, pos_info)
+
+
+def export_bom(board: pcbnew.BOARD, path: str) -> None:
+    fps = _get_capacitors(board)
+
+    bom: Dict[Tuple[str, str], List[pcbnew.FOOTPRINT]] = {}
+    for fp in fps:
+        key = (fp.GetValue(), fp.GetFPID().GetUniStringLibId())
+        if key in bom:
+            bom[key].append(fp)
+        else:
+            bom[key] = [fp]
+
+    bom = list(bom.values())
+    for m in bom:
+        m.sort(key=_field_designator)
+
+    bom_info = [
+        {
+            'Comment': _field_comment(m[0]),
+            'Description': _field_description(m[0]),
+            'Footprint': _field_footprint(m[0]),
+            'Pins': _field_pins(m[0]),
+            'Lib-ref': [fp.GetReference() for fp in m],
+            'Quantity': len(m),
+        }
+        for m in bom
+    ]
+
+    _write_csv(path, bom_info)

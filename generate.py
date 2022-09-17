@@ -32,6 +32,7 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
         pcb_path_final = os.path.join(tmp_path, project_name + '_final.kicad_pcb').replace('\\', '/')
         output_path = os.path.join(cwd_path, project_name + '-Gerber').replace('\\', '/')
         pos_path = os.path.join(cwd_path, project_name + '-pos.csv').replace('\\', '/')
+        bom_path = os.path.join(cwd_path, project_name + '-bom.csv').replace('\\', '/')
         log_file = os.path.join(cwd_path, 'log.txt').replace('\\', '/')
         if os.path.exists(log_file):
             os.remove(log_file)
@@ -102,6 +103,13 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
     except Exception as err:
         with open(log_file, 'a') as file:
             file.write(f'pos file not exported\nError: {err}')
+
+    # Export BOM
+    try:
+        fabrication.export_bom(board, bom_path)
+    except Exception as err:
+        with open(log_file, 'a') as file:
+            file.write(f'BOM not exported\nError: {err}')
 
     if not keep_tmp:
         # Remove temp folder
