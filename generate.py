@@ -40,7 +40,7 @@ def generate(project_name: str, block_type: Cuboid, sch_type: schematic.Schemati
             file.write(f'Startup error\nError: {err}\n')
 
     coil_style = CoilStyle(coil_d, coil_track_w, coil_track_s)
-    c_val = coil_style.get_cap_repr()
+    c_val = coil_style.get_C_recommend_repr()
     print('Coil Style:', coil_style, sep='\n')
 
     # Create a temp folder

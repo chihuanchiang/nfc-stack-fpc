@@ -3,6 +3,7 @@ import pcbnew
 from pcbnew import BOARD, wxPoint
 from typing import Tuple
 
+from eseries import find_nearest, E24
 import utils
 import vector
 
@@ -23,7 +24,9 @@ class CoilStyle:
         if not turns:
             self.turns = self._get_optimal_turns()
 
-        self.cap = self._get_required_cap()
+        self.L = self._get_L()
+        self.C = self._get_required_C()
+        self.C_recommend = find_nearest(E24, self.C)
 
     def __repr__(self) -> str:
         return (
@@ -33,8 +36,8 @@ class CoilStyle:
             f'  frequency: {self.freq / 1e6} MHz\n'
             f'  q_factor: {self.q}\n'
             f'  turns: {self.turns}\n'
-            f'  C: {self.get_cap_repr()}\n'
-            f'  L: {self.get_inductance_repr()}'
+            f'  C: {self.get_C_repr()}\n'
+            f'  L: {self.get_L_repr()}'
         )
 
     def _get_inner_diameter(self, turns: int = None) -> float:
@@ -43,7 +46,7 @@ class CoilStyle:
             turns = self.turns
         return self.diameter_M - 2 * (turns * self.track_w_M + (turns - 1) * self.track_s_M)
 
-    def _get_inductance(self, turns: int = None) -> float:
+    def _get_L(self, turns: int = None) -> float:
         """Returns the inductance of a square antenna"""
         if not turns:
             turns = self.turns
@@ -54,14 +57,14 @@ class CoilStyle:
         k1, k2, mu = 2.34, 2.75, 4 * math.pi * 1e-7
         return k1 * mu * (turns ** 2) * (d / (1 + k2 * ratio))
 
-    def _get_required_cap(self) -> float:
-        return 1 / (4 * math.pi * math.pi * (self.freq ** 2) * self._get_inductance())
+    def _get_required_C(self) -> float:
+        return 1 / (4 * math.pi * math.pi * (self.freq ** 2) * self._get_L())
 
     def _get_optimal_turns(self) -> int:
         max_turns = int(self.diameter_M / (self.track_w_M + self.track_s_M) / 2)
         prev_l = 0
         for curr_turns in range(1, max_turns + 1):
-            curr_l = self._get_inductance(curr_turns)
+            curr_l = self._get_L(curr_turns)
             if (curr_l < prev_l):
                 return curr_turns - 1
             prev_l = curr_l
@@ -83,11 +86,14 @@ class CoilStyle:
         except NameError:
             return None
 
-    def get_inductance_repr(self) -> str:
-        return self._get_repr(self._get_inductance()) + 'H'
+    def get_L_repr(self) -> str:
+        return self._get_repr(self.L) + 'H'
 
-    def get_cap_repr(self) -> str:
-        return self._get_repr(self.cap) + 'F'
+    def get_C_repr(self) -> str:
+        return self._get_repr(self.C) + 'F'
+
+    def get_C_recommend_repr(self) -> str:
+        return self._get_repr(self.C_recommend) + 'F'
 
 
 class Coil:
